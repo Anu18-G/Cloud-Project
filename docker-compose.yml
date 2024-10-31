@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    image: resume-frontend:latest
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    environment:
+      - REACT_APP_API_URL=/api
+    ports:
+      - "3000:3000"
+    networks:
+      - resume_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    image: resume-backend:latest
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    environment:
+      - PORT=4001
+      - NODE_ENV=production
+    ports:
+      - "4001:4001"
+    networks:
+      - resume_network
+
+  nginx:
+    image: nginx:alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    ports:
+      - "80:80"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+    networks:
+      - resume_network
+
+networks:
+  resume_network:
+    driver: overlay
